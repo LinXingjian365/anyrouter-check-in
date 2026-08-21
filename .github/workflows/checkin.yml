@@ -2,8 +2,8 @@ name: AnyRouter 自动签到
 
 on:
   schedule:
-    - cron: '0 23 * * *' # 北京时间 07:00
-    - cron: '0 14 * * *' # 北京时间 22:00
+    - cron: '0 23 * * *'   # 北京时间 07:00
+    - cron: '0 14 * * *'   # 北京时间 22:00（如需仅保留一个，可删除此行）
   workflow_dispatch:
 
 env:
@@ -67,11 +67,20 @@ jobs:
           echo "缓存未命中，开始安装 Playwright 浏览器..."
           uv run playwright install chromium --with-deps
 
+      # 新增：计算账户配置哈希，用于余额缓存 key
+      - name: 计算账户配置哈希
+        id: account-hash
+        run: |
+          $config = "${{ secrets.ANYROUTER_ACCOUNTS }}:${{ secrets.PROVIDERS }}"
+          $bytes = [System.Text.Encoding]::UTF8.GetBytes($config)
+          $hash = [System.BitConverter]::ToString([System.Security.Cryptography.SHA256]::Create().ComputeHash($bytes)) -replace '-',''
+          echo "hash=$($hash.Substring(0,16))" >> $env:GITHUB_OUTPUT
+
       - name: 恢复余额历史缓存
         uses: actions/cache@v4
         with:
           path: balance_hash.txt
-          key: balance-hash-${{ github.sha }}
+          key: balance-hash-${{ steps.account-hash.outputs.hash }}
           restore-keys: |
             balance-hash-
 
